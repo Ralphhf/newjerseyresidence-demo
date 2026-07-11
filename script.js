@@ -16,16 +16,17 @@
      mobile landscape frames-sm/ 150x 1280x720 @5fps                                   */
   const USE_P       = IS_MOBILE && PORTRAIT;
   const FRAME_DIR   = USE_P ? 'frames-p' : (IS_MOBILE ? 'frames-sm' : 'frames');
-  const N           = IS_MOBILE ? 150 : 301;
+  const N           = IS_MOBILE ? 301 : 722;      // full 24fps desktop, 10fps mobile
+  const EXT         = 'webp';
   const DPR_CAP     = 2;                          // sharp on scaled/retina displays
   const CONCURRENCY = 12;                         // parallel image loads
   const REDUCED     = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* Decode-ahead window (pre-decoded ImageBitmaps around the playhead) */
   const HAS_IB      = typeof createImageBitmap === 'function';
-  const AHEAD       = IS_MOBILE ? 10 : 20;
+  const AHEAD       = IS_MOBILE ? 10 : 24;
   const BEHIND      = IS_MOBILE ? 4  : 8;
-  const MAX_DECODES = IS_MOBILE ? 3  : 4;
+  const MAX_DECODES = IS_MOBILE ? 3  : 6;
 
   /* The loaded set is orientation-specific — reload if the device rotates */
   if (IS_MOBILE) {
@@ -34,12 +35,19 @@
     });
   }
 
-  const framePath = i => FRAME_DIR + '/frame_' + String(i + 1).padStart(4, '0') + '.jpg';
+  const framePath = i => FRAME_DIR + '/frame_' + String(i + 1).padStart(4, '0') + '.' + EXT;
 
-  /* Reveal once the opening 45% is fully buffered and 60% overall is in —
-     scrolling can no longer outrun the network. Rest streams in background. */
-  const GATE_PREFIX = Math.ceil(N * 0.45);
-  const GATE_TOTAL  = Math.ceil(N * 0.60);
+  /* Two-pass loading: every other frame first (a complete half-rate film),
+     then the in-between frames stream in behind. The site reveals as soon as
+     the half-rate film covers the opening stretch — quality then climbs to
+     full frame rate within seconds while you watch. */
+  const loadOrder = [];
+  for (let i = 0; i < N; i += 2) loadOrder.push(i);
+  for (let i = 1; i < N; i += 2) loadOrder.push(i);
+
+  /* Gate on COVERAGE: a frame counts as watchable if it or a neighbor is in */
+  const GATE_PREFIX = Math.ceil(N * 0.45);   // covered prefix required
+  const GATE_TOTAL  = Math.ceil(N * 0.32);   // ~60% of the first pass
 
   /* ---------------- Elements ---------------- */
 
@@ -91,6 +99,15 @@
     img.src = framePath(i);
   }
 
+  /* Contiguous run of WATCHABLE frames (the frame or a direct neighbor is in) */
+  function coveredPrefix() {
+    let c = 0;
+    while (c < N && (loadedFlags[c] ||
+           (c > 0 && loadedFlags[c - 1]) ||
+           (c + 1 < N && loadedFlags[c + 1]))) c++;
+    return c;
+  }
+
   function settle(i, ok, img) {
     inFlight--;
     settled++;
@@ -98,19 +115,21 @@
       images[i] = img;
       loadedFlags[i] = 1;
       loadedCount++;
-      while (contig < N && loadedFlags[contig]) contig++;
       if (i === 0) needsDraw = true;               // paint frame 1 behind the loader
     }
     setLoaderPct(Math.floor((settled / N) * 100));
-    if (!revealed && ((contig >= GATE_PREFIX && loadedCount >= GATE_TOTAL) || settled === N)) {
-      revealed = true;
-      finishLoader();
+    if (!revealed) {
+      contig = coveredPrefix();
+      if ((contig >= GATE_PREFIX && loadedCount >= GATE_TOTAL) || settled === N) {
+        revealed = true;
+        finishLoader();
+      }
     }
     pump();
   }
 
   function pump() {
-    while (inFlight < CONCURRENCY && nextToQueue < N) loadOne(nextToQueue++);
+    while (inFlight < CONCURRENCY && nextToQueue < N) loadOne(loadOrder[nextToQueue++]);
   }
 
   /* Sweep the counter to 100, then fade the loader and unlock scrolling */
