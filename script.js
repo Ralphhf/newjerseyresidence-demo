@@ -186,6 +186,12 @@
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'medium';
     scrollRange = Math.max(1, filmSection.offsetHeight - cssH);
+    if (aboutSec) {
+      vh = window.innerHeight;
+      const r = aboutSec.getBoundingClientRect();
+      aboutMid  = r.top + window.scrollY + r.height / 2;
+      aboutSpan = (r.height + vh) / 2;
+    }
     needsDraw = true;
   }
 
@@ -314,6 +320,7 @@
     }
 
     updateOverlays(N > 1 ? current / (N - 1) : 0);
+    aboutParallax();
     requestAnimationFrame(tick);
   }
 
@@ -323,6 +330,51 @@
     document.getElementById('services')
       .scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth' });
   });
+
+  /* ---- About-section cinematics ---- */
+
+  /* Split a heading into masked words for the cascade reveal (keeps <br>) */
+  function cascadeSplit(el) {
+    const frag = document.createDocumentFragment();
+    let w = 0;
+    for (const node of [...el.childNodes]) {
+      if (node.nodeType === 3) {
+        for (const part of node.textContent.split(/(\s+)/)) {
+          if (!part) continue;
+          if (/^\s+$/.test(part)) { frag.appendChild(document.createTextNode(' ')); continue; }
+          const outer = document.createElement('span');
+          outer.className = 'cw';
+          const inner = document.createElement('span');
+          inner.className = 'cwi';
+          inner.textContent = part;
+          inner.style.setProperty('--wd', (w++ * 110) + 'ms');
+          outer.appendChild(inner);
+          frag.appendChild(outer);
+        }
+      } else {
+        frag.appendChild(node.cloneNode(false));
+      }
+    }
+    el.textContent = '';
+    el.appendChild(frag);
+  }
+  document.querySelectorAll('.cascade').forEach(cascadeSplit);
+
+  /* Parallax drift: columns separate slightly, gold glow floats */
+  const aboutSec  = document.getElementById('about');
+  const aboutMain = document.querySelector('.about-main');
+  const awardsCol = document.querySelector('#about .awards');
+  const aboutGlow = document.querySelector('#about .section-glow');
+  let aboutMid = 0, aboutSpan = 1, vh = window.innerHeight;
+
+  function aboutParallax() {
+    if (REDUCED || !aboutSec) return;
+    const rel = Math.max(-1, Math.min(1,
+      (window.scrollY + vh / 2 - aboutMid) / aboutSpan));
+    aboutMain.style.transform = 'translate3d(0,' + (rel * -14).toFixed(1) + 'px,0)';
+    awardsCol.style.transform = 'translate3d(0,' + (rel *  20).toFixed(1) + 'px,0)';
+    aboutGlow.style.transform = 'translate3d(0,' + (rel * -80).toFixed(1) + 'px,0)';
+  }
 
   /* Gold count-up for the stats band */
   function countUp(el) {
@@ -342,11 +394,20 @@
       if (e.isIntersecting) {
         e.target.classList.add('in');
         e.target.querySelectorAll('[data-count]').forEach(countUp);
+        /* gold light-sweep once the cascade words have settled */
+        if (e.target.classList.contains('cascade') && !REDUCED) {
+          const el = e.target;
+          setTimeout(() => {
+            el.classList.add('shimmer-on');
+            el.addEventListener('animationend',
+              () => el.classList.remove('shimmer-on'), { once: true });
+          }, 1600);
+        }
         io.unobserve(e.target);
       }
     }
   }, { threshold: 0.18 });
-  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+  document.querySelectorAll('.reveal, .line-draw').forEach(el => io.observe(el));
 
   const form = document.getElementById('contact-form');
   form.addEventListener('submit', e => {
