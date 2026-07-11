@@ -324,10 +324,24 @@
       .scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth' });
   });
 
+  /* Gold count-up for the stats band */
+  function countUp(el) {
+    const target = parseInt(el.dataset.count, 10);
+    if (REDUCED) { el.textContent = target.toLocaleString('en-US'); return; }
+    const t0 = performance.now(), dur = 1800;
+    (function step(t) {
+      const k = Math.min(1, (t - t0) / dur);
+      const eased = 1 - Math.pow(1 - k, 3);
+      el.textContent = Math.round(target * eased).toLocaleString('en-US');
+      if (k < 1) requestAnimationFrame(step);
+    })(t0);
+  }
+
   const io = new IntersectionObserver(entries => {
     for (const e of entries) {
       if (e.isIntersecting) {
         e.target.classList.add('in');
+        e.target.querySelectorAll('[data-count]').forEach(countUp);
         io.unobserve(e.target);
       }
     }
