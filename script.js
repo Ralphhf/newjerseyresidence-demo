@@ -421,6 +421,58 @@
   }, { threshold: 0.18 });
   document.querySelectorAll('.reveal, .line-draw').forEach(el => io.observe(el));
 
+  /* ---- FAQ accordion ---- */
+  document.querySelectorAll('.faq-item').forEach(item => {
+    const btn = item.querySelector('.faq-q');
+    const panel = item.querySelector('.faq-a');
+    btn.addEventListener('click', () => {
+      const open = item.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open);
+      panel.style.maxHeight = open ? panel.scrollHeight + 'px' : '0px';
+    });
+  });
+
+  /* ---- Mortgage calculator ---- */
+  const calcEls = {
+    price: document.getElementById('c-price'),
+    down:  document.getElementById('c-down'),
+    rate:  document.getElementById('c-rate'),
+    term:  document.getElementById('c-term'),
+    monthly: document.getElementById('calc-monthly'),
+    loan:    document.getElementById('calc-loan'),
+    downAmt: document.getElementById('calc-downamt'),
+  };
+
+  function money(n) {
+    return '$' + Math.max(0, Math.round(n)).toLocaleString('en-US');
+  }
+
+  function recalc() {
+    const price   = parseFloat(calcEls.price.value) || 0;
+    const downPct = Math.min(100, Math.max(0, parseFloat(calcEls.down.value) || 0));
+    const rate    = Math.max(0, parseFloat(calcEls.rate.value) || 0);
+    const years   = parseInt(calcEls.term.value, 10) || 30;
+
+    const loan = price * (1 - downPct / 100);
+    const r = rate / 100 / 12;
+    const n = years * 12;
+    const monthly = r > 0
+      ? loan * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1)
+      : loan / n;
+
+    calcEls.monthly.textContent = money(monthly);
+    calcEls.loan.textContent    = money(loan);
+    calcEls.downAmt.textContent = money(price * downPct / 100);
+  }
+
+  if (calcEls.price) {
+    [calcEls.price, calcEls.down, calcEls.rate, calcEls.term].forEach(el => {
+      el.addEventListener('input', recalc);
+      el.addEventListener('change', recalc);
+    });
+    recalc();
+  }
+
   const form = document.getElementById('contact-form');
   form.addEventListener('submit', e => {
     e.preventDefault();

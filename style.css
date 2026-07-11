@@ -601,6 +601,245 @@ a { color: inherit; text-decoration: none; }
   color: var(--gold) !important;
 }
 
+/* ---- Programs (More Ways We Serve) ---- */
+
+.program-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.6rem;
+}
+
+.program {
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  padding: 2.2rem 2rem;
+  display: flex;
+  flex-direction: column;
+  transition: border-color .6s var(--ease), transform 1s var(--ease), opacity 1s var(--ease);
+  transition-delay: var(--d, 0s);
+}
+.program:hover { border-color: var(--gold-soft); transform: translateY(-4px); transition-delay: 0s; }
+
+.program h3 {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 1.35rem;
+  letter-spacing: .03em;
+  margin-bottom: .9rem;
+}
+
+.program p { color: var(--muted); font-size: 14px; }
+
+.program-note {
+  margin-top: auto;
+  padding-top: 1.3rem;
+  font-size: 10px !important;
+  letter-spacing: .3em; text-indent: .3em;
+  text-transform: uppercase;
+  color: var(--gold) !important;
+}
+
+/* ---- Mortgage calculator ---- */
+
+.calc-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: clamp(3rem, 7vw, 6rem);
+  align-items: start;
+}
+
+.calc-copy { color: var(--muted); max-width: 40ch; margin-bottom: 2.6rem; }
+
+.calc-fields { display: flex; flex-direction: column; gap: 1.9rem; }
+
+.calc-fields select {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(245, 242, 236, .22);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-weight: 300;
+  font-size: 15px;
+  padding: .65rem 0;
+  border-radius: 0;
+  transition: border-color .45s var(--ease);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23c9a45c' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right .2rem center;
+  cursor: pointer;
+}
+.calc-fields select:focus { outline: none; border-bottom-color: var(--gold); }
+.calc-fields select option { background: #101010; color: var(--ink); }
+
+/* hide number spinners for a cleaner look */
+.calc-fields input[type="number"]::-webkit-outer-spin-button,
+.calc-fields input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.calc-fields input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
+.calc-result {
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  padding: clamp(2.4rem, 4vw, 3.4rem);
+  text-align: center;
+  position: sticky;
+  top: 6rem;
+}
+
+.calc-label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: .4em; text-indent: .4em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 1.2rem;
+}
+
+.calc-monthly {
+  display: block;
+  font-family: var(--serif);
+  font-weight: 300;
+  font-size: clamp(3rem, 5.5vw, 4.4rem);
+  line-height: 1.05;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.calc-breakdown {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 2.2rem 0 1.6rem;
+  padding-top: 1.8rem;
+  border-top: 1px solid var(--hairline);
+}
+.calc-breakdown dt {
+  font-size: 10px;
+  letter-spacing: .3em; text-indent: .3em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: .45rem;
+}
+.calc-breakdown dd {
+  font-family: var(--serif);
+  font-size: 1.35rem;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.calc-note { font-size: 12px; color: var(--muted); line-height: 1.7; }
+
+/* ---- FAQ accordion ---- */
+
+.wrap-narrow { max-width: 860px; }
+
+.faq-list { border-top: 1px solid var(--hairline); }
+
+.faq-item { border-bottom: 1px solid var(--hairline); }
+
+.faq-q {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  background: none;
+  border: none;
+  padding: 1.6rem .4rem;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 1.28rem;
+  letter-spacing: .02em;
+  color: var(--ink);
+  transition: color .45s var(--ease);
+}
+.faq-q:hover { color: var(--gold); }
+
+.faq-icon {
+  position: relative;
+  flex: 0 0 14px;
+  height: 14px;
+}
+.faq-icon::before, .faq-icon::after {
+  content: "";
+  position: absolute;
+  background: var(--gold);
+  transition: transform .5s var(--ease);
+}
+.faq-icon::before { left: 0; right: 0; top: 6px; height: 1px; }
+.faq-icon::after  { top: 0; bottom: 0; left: 6px; width: 1px; }
+.faq-item.open .faq-icon::after { transform: scaleY(0); }
+
+.faq-a {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .6s var(--ease);
+}
+.faq-a p {
+  padding: 0 .4rem 1.7rem;
+  color: var(--muted);
+  font-size: 15px;
+  max-width: 64ch;
+}
+
+/* ---- Insights ---- */
+
+.insight-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.6rem;
+}
+
+.insight {
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  padding: 2.2rem 2rem;
+  transition: border-color .6s var(--ease), transform 1s var(--ease), opacity 1s var(--ease);
+  transition-delay: var(--d, 0s);
+}
+.insight:hover { border-color: var(--gold-soft); transform: translateY(-4px); transition-delay: 0s; }
+
+.insight-date {
+  font-size: 10px;
+  letter-spacing: .35em; text-indent: .35em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 1rem;
+}
+
+.insight h3 {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 1.4rem;
+  line-height: 1.3;
+  letter-spacing: .02em;
+  margin-bottom: 1.6rem;
+}
+
+.insight-more {
+  margin-top: auto;
+  font-size: 11px;
+  letter-spacing: .25em; text-indent: .25em;
+  text-transform: uppercase;
+  color: var(--muted);
+  transition: color .45s var(--ease);
+}
+.insight:hover .insight-more { color: var(--gold); }
+
+.insight-note {
+  margin-top: 2.6rem;
+  text-align: center;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.1rem;
+  color: var(--muted);
+}
+
 /* ---- Communities ---- */
 
 .community-grid {
@@ -749,6 +988,15 @@ footer {
   margin-bottom: 1.8rem;
 }
 
+.footer-hiring {
+  font-size: 12px;
+  letter-spacing: .08em;
+  color: var(--muted);
+  margin-bottom: 1.2rem;
+}
+.footer-hiring a { color: var(--gold); }
+.footer-hiring a:hover { text-decoration: underline; }
+
 .socials {
   display: flex;
   justify-content: center;
@@ -787,6 +1035,15 @@ footer {
   .about-grid { grid-template-columns: 1fr; }
   .team-grid { grid-template-columns: 1fr; max-width: 420px; margin: 0 auto; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 3rem 1.5rem; }
+  .program-grid { grid-template-columns: 1fr 1fr; }
+  .insight-grid { grid-template-columns: 1fr; max-width: 480px; margin: 0 auto; }
+  .calc-grid { grid-template-columns: 1fr; }
+  .calc-result { position: static; }
+}
+
+@media (max-width: 620px) {
+  .program-grid { grid-template-columns: 1fr; }
+  .faq-q { font-size: 1.12rem; }
 }
 
 @media (max-width: 768px) {
