@@ -9,8 +9,13 @@
   const IS_MOBILE = window.matchMedia(
     '(max-width: 768px), ((pointer: coarse) and (max-width: 1024px))'
   ).matches;
-  /* Desktop: 1920x1080 frames at 10fps. Mobile: 1280x720 at 5fps (lighter). */
-  const FRAME_DIR   = IS_MOBILE ? 'frames-sm' : 'frames';
+  const PORTRAIT = window.matchMedia('(orientation: portrait)').matches;
+  /* Three frame sets, all cut from the 4K master:
+     desktop         frames/    301x 1920x1080 @10fps
+     mobile portrait frames-p/  150x 1080x1920 @5fps (center 9:16 crop — native-sharp)
+     mobile landscape frames-sm/ 150x 1280x720 @5fps                                   */
+  const USE_P       = IS_MOBILE && PORTRAIT;
+  const FRAME_DIR   = USE_P ? 'frames-p' : (IS_MOBILE ? 'frames-sm' : 'frames');
   const N           = IS_MOBILE ? 150 : 301;
   const DPR_CAP     = 2;                          // sharp on scaled/retina displays
   const CONCURRENCY = 12;                         // parallel image loads
@@ -18,9 +23,16 @@
 
   /* Decode-ahead window (pre-decoded ImageBitmaps around the playhead) */
   const HAS_IB      = typeof createImageBitmap === 'function';
-  const AHEAD       = IS_MOBILE ? 14 : 20;
-  const BEHIND      = IS_MOBILE ? 6  : 8;
-  const MAX_DECODES = 4;
+  const AHEAD       = IS_MOBILE ? 10 : 20;
+  const BEHIND      = IS_MOBILE ? 4  : 8;
+  const MAX_DECODES = IS_MOBILE ? 3  : 4;
+
+  /* The loaded set is orientation-specific — reload if the device rotates */
+  if (IS_MOBILE) {
+    window.matchMedia('(orientation: portrait)').addEventListener('change', () => {
+      window.location.reload();
+    });
+  }
 
   const framePath = i => FRAME_DIR + '/frame_' + String(i + 1).padStart(4, '0') + '.jpg';
 
@@ -32,7 +44,7 @@
   /* ---------------- Elements ---------------- */
 
   const canvas      = document.getElementById('film');
-  const ctx         = canvas.getContext('2d');
+  const ctx         = canvas.getContext('2d', { alpha: false });  // opaque = cheaper compositing
   const filmSection = document.getElementById('film-scroll');
   const stage       = filmSection.querySelector('.stage');
   const scrim       = document.getElementById('scrim');
@@ -420,9 +432,10 @@
 
   /* Tiny state hook for debugging / automated checks */
   window.__rbState = () => ({
-    frames: N, loaded: loadedCount, settled, contig, revealed,
+    frames: N, dir: FRAME_DIR, loaded: loadedCount, settled, contig, revealed,
     drawnIndex: Math.round(lastDrawnPos), current: +current.toFixed(2),
-    bitmaps: bitmaps.size, scrollY: window.scrollY, scrollRange
+    bitmaps: bitmaps.size, canvas: canvas.width + 'x' + canvas.height,
+    scrollY: window.scrollY, scrollRange
   });
 
   /* ---------------- Init ---------------- */
