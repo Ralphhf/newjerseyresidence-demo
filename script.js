@@ -12,9 +12,14 @@
   ).matches;
   const FRAME_STEP  = IS_MOBILE ? 2 : 1;          // mobile: load every other frame
   const DPR_CAP     = IS_MOBILE ? 1 : 1.5;        // source is 1280x720 — nothing gained past this
-  const SMOOTHING   = 0.16;                       // frame-index lerp per rAF tick
-  const CONCURRENCY = 10;                         // parallel image loads
+  const CONCURRENCY = 12;                         // parallel image loads
   const REDUCED     = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* Decode-ahead window (pre-decoded ImageBitmaps around the playhead) */
+  const HAS_IB      = typeof createImageBitmap === 'function';
+  const AHEAD       = IS_MOBILE ? 14 : 26;
+  const BEHIND      = IS_MOBILE ? 6  : 10;
+  const MAX_DECODES = 4;
 
   const framePath = n => 'frames/frame_' + String(n).padStart(4, '0') + '.jpg';
 
@@ -23,10 +28,10 @@
   for (let n = 1; n <= TOTAL_FRAMES; n += FRAME_STEP) frameNumbers.push(n);
   const N = frameNumbers.length;
 
-  /* Reveal the site once the opening stretch is ready and enough of the
-     rest is buffered — remaining frames keep loading in the background. */
-  const GATE_PREFIX = Math.ceil(N * 0.15);
-  const GATE_TOTAL  = Math.ceil(N * 0.40);
+  /* Reveal once the opening 45% is fully buffered and 60% overall is in —
+     scrolling can no longer outrun the network. Rest streams in background. */
+  const GATE_PREFIX = Math.ceil(N * 0.45);
+  const GATE_TOTAL  = Math.ceil(N * 0.60);
 
   /* ---------------- Elements ---------------- */
 
@@ -115,6 +120,62 @@
     requestAnimationFrame(step);
   }
 
+  /* ---------------- Decode-ahead bitmap cache ----------------
+     Pre-decodes JPEGs into ImageBitmaps around the playhead so
+     drawImage never pays a synchronous decode mid-scroll.        */
+
+  const bitmaps = new Map();   // idx -> ImageBitmap | Promise
+  let pendingDecodes = 0;
+  let decodeDir = 1;
+
+  function maybeDecode(idx) {
+    if (bitmaps.has(idx) || !loadedFlags[idx] || pendingDecodes >= MAX_DECODES) return;
+    pendingDecodes++;
+    let promise;
+    try {
+      promise = IS_MOBILE
+        ? createImageBitmap(images[idx], { resizeWidth: 960, resizeHeight: 540, resizeQuality: 'high' })
+        : createImageBitmap(images[idx]);
+    } catch (e) {
+      promise = createImageBitmap(images[idx]);
+    }
+    const p = promise.then(bm => {
+      if (bitmaps.get(idx) === p) bitmaps.set(idx, bm);
+      else bm.close();
+    }).catch(() => {
+      if (bitmaps.get(idx) === p) bitmaps.delete(idx);
+    }).finally(() => { pendingDecodes--; });
+    bitmaps.set(idx, p);
+  }
+
+  function ensureWindow(center) {
+    if (!HAS_IB) return;
+    const fwd = decodeDir >= 0;
+    const lo = Math.max(0,     center - (fwd ? BEHIND : AHEAD));
+    const hi = Math.min(N - 1, center + (fwd ? AHEAD  : BEHIND));
+    for (const [k, v] of bitmaps) {
+      if (k < lo - 3 || k > hi + 3) {
+        if (v && typeof v.close === 'function') v.close();
+        bitmaps.delete(k);
+      }
+    }
+    /* fill in the direction of travel first */
+    if (fwd) {
+      for (let i = center; i <= hi; i++) maybeDecode(i);
+      for (let i = center - 1; i >= lo; i--) maybeDecode(i);
+    } else {
+      for (let i = center; i >= lo; i--) maybeDecode(i);
+      for (let i = center + 1; i <= hi; i++) maybeDecode(i);
+    }
+  }
+
+  /* Best drawable source for a frame: decoded bitmap, else raw image */
+  function frameSource(i) {
+    const bm = bitmaps.get(i);
+    if (bm && typeof bm.close === 'function') return bm;
+    return loadedFlags[i] ? images[i] : null;
+  }
+
   /* ---------------- Canvas ---------------- */
 
   let stageW = 0, stageH = 0, scrollRange = 1;
@@ -134,14 +195,11 @@
   }
 
   /* object-fit: cover */
-  function draw(i) {
-    const img = images[i];
-    if (!img) return;
-    const s  = Math.max(stageW / img.naturalWidth, stageH / img.naturalHeight);
-    const dw = img.naturalWidth  * s;
-    const dh = img.naturalHeight * s;
-    ctx.clearRect(0, 0, stageW, stageH);
-    ctx.drawImage(img, (stageW - dw) / 2, (stageH - dh) / 2, dw, dh);
+  function coverDraw(src) {
+    const iw = src.naturalWidth  || src.width;
+    const ih = src.naturalHeight || src.height;
+    const s  = Math.max(stageW / iw, stageH / ih);
+    ctx.drawImage(src, (stageW - iw * s) / 2, (stageH - ih * s) / 2, iw * s, ih * s);
   }
 
   /* Nearest decoded frame if the exact one isn't in yet */
@@ -152,6 +210,34 @@
       if (i + d <  N && loadedFlags[i + d]) return i + d;
     }
     return -1;
+  }
+
+  /* Cross-fade between the two frames around the fractional playhead —
+     10fps stills read as continuous, motion-blurred film. */
+  function drawBlended(pos) {
+    const i = Math.floor(pos);
+    const j = Math.min(N - 1, i + 1);
+    const f = pos - i;
+
+    let si = frameSource(i);
+    let sj = (f > 0.02 && j !== i) ? frameSource(j) : null;
+
+    if (!si) {
+      const nb = nearestLoaded(i);
+      if (nb < 0) return false;
+      si = frameSource(nb);
+      sj = null;
+      if (!si) return false;
+    }
+
+    ctx.globalAlpha = 1;
+    coverDraw(si);
+    if (sj) {
+      ctx.globalAlpha = f;
+      coverDraw(sj);
+      ctx.globalAlpha = 1;
+    }
+    return true;
   }
 
   /* ---------------- Overlays ---------------- */
@@ -198,26 +284,31 @@
 
   /* ---------------- Main loop ---------------- */
 
-  let current = 0;        // smoothed fractional frame index
-  let drawnIndex = -1;
+  let current = 0;            // smoothed fractional frame index
+  let lastDrawnPos = -1;
 
   function tick() {
     const p = Math.min(1, Math.max(0, window.scrollY / scrollRange));
     const targetFrame = p * (N - 1);
+    const delta = targetFrame - current;
 
     if (REDUCED) {
       current = targetFrame;
     } else {
-      current += (targetFrame - current) * SMOOTHING;
-      if (Math.abs(targetFrame - current) < 0.05) current = targetFrame;
+      /* adaptive smoothing: glide on slow scrolls, snap on fast flicks
+         so the film never trails the scroll wheel */
+      const k = Math.min(0.5, 0.14 + Math.abs(delta) * 0.006);
+      current += delta * k;
+      if (Math.abs(targetFrame - current) < 0.02) current = targetFrame;
     }
 
-    const idx = Math.round(current);
-    if (idx !== drawnIndex || needsDraw) {
-      const use = nearestLoaded(idx);
-      if (use >= 0) {
-        draw(use);
-        drawnIndex = idx;
+    if (delta > 0.5) decodeDir = 1;
+    else if (delta < -0.5) decodeDir = -1;
+    ensureWindow(Math.round(current));
+
+    if (needsDraw || Math.abs(current - lastDrawnPos) > 0.003) {
+      if (drawBlended(current)) {
+        lastDrawnPos = current;
         needsDraw = false;
       }
     }
@@ -255,8 +346,8 @@
   /* Tiny state hook for debugging / automated checks */
   window.__rbState = () => ({
     frames: N, loaded: loadedCount, settled, contig, revealed,
-    drawnIndex, current: +current.toFixed(2),
-    scrollY: window.scrollY, scrollRange
+    drawnIndex: Math.round(lastDrawnPos), current: +current.toFixed(2),
+    bitmaps: bitmaps.size, scrollY: window.scrollY, scrollRange
   });
 
   /* ---------------- Init ---------------- */

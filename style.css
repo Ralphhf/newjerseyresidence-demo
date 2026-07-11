@@ -101,7 +101,7 @@ a { color: inherit; text-decoration: none; }
 
 /* ============ Cinematic film section ============ */
 
-.film-scroll { height: 500vh; position: relative; }
+.film-scroll { height: 650vh; position: relative; }
 
 .stage {
   position: sticky; top: 0;
