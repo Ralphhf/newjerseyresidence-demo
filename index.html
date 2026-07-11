@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roman Balandin Realty — New Jersey Luxury Real Estate</title>
+<meta name="description" content="Roman Balandin Realty — New Jersey's premiere luxury real estate. Serving Marlboro, Hoboken, Red Bank, Asbury Park, Colts Neck, Holmdel and beyond.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230a0a0a'/%3E%3Ctext x='32' y='44' font-family='Georgia,serif' font-size='36' fill='%23c9a45c' text-anchor='middle'%3ERB%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="is-loading">
+
+<!-- ============ Loader ============ -->
+<div class="loader" id="loader">
+  <p class="loader-brand">Roman Balandin Realty</p>
+  <div class="loader-count"><span id="loader-num">0</span><span class="loader-pct">%</span></div>
+  <div class="loader-bar"><span id="loader-fill"></span></div>
+  <p class="loader-note">Preparing your private tour</p>
+</div>
+
+<noscript>
+  <div class="noscript">This experience requires JavaScript. Please enable it to continue.</div>
+</noscript>
+
+<!-- ============ Cinematic scroll film ============ -->
+<section class="film-scroll" id="film-scroll">
+  <div class="stage">
+    <canvas id="film" aria-label="Cinematic tour of a luxury New Jersey estate"></canvas>
+    <div class="scrim" id="scrim" aria-hidden="true"></div>
+
+    <div class="overlay overlay-hero" id="ov-hero">
+      <span class="gold-rule" aria-hidden="true"></span>
+      <h1>Roman Balandin<br>Realty</h1>
+      <p class="tagline">New Jersey&rsquo;s Premiere Luxury Real Estate</p>
+      <div class="scroll-hint" aria-hidden="true">
+        <span class="scroll-word">Scroll</span>
+        <span class="scroll-line"></span>
+      </div>
+    </div>
+
+    <div class="overlay" id="ov-1">
+      <p class="eyebrow">I &mdash; The Arrival</p>
+      <h2>Discover Extraordinary Homes</h2>
+    </div>
+
+    <div class="overlay" id="ov-2">
+      <p class="eyebrow">II &mdash; The Welcome</p>
+      <h2>Step Into Luxury</h2>
+    </div>
+
+    <div class="overlay" id="ov-3">
+      <p class="eyebrow">III &mdash; The Craft</p>
+      <h2>Every Detail Matters</h2>
+    </div>
+
+    <div class="overlay" id="ov-4">
+      <p class="eyebrow">IV &mdash; The Reward</p>
+      <h2>Your Dream Home Awaits</h2>
+      <button class="btn-gold" id="explore-btn" type="button" tabindex="-1">Explore Listings</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Content ============ -->
+<main id="main">
+
+  <section class="section" id="services">
+    <div class="wrap">
+      <p class="eyebrow reveal">Our Services</p>
+      <h2 class="section-title reveal" style="--d:.08s">A White-Glove Approach</h2>
+      <div class="cards">
+        <article class="card reveal" style="--d:.15s">
+          <span class="card-num">01</span>
+          <h3>For Buyers</h3>
+          <p>From the first private showing to the final signature, we curate New Jersey&rsquo;s most
+             exceptional properties around your vision &mdash; with off-market access, deep local
+             intelligence, and negotiation that protects every dollar.</p>
+        </article>
+        <article class="card reveal" style="--d:.28s">
+          <span class="card-num">02</span>
+          <h3>For Sellers</h3>
+          <p>Your home deserves a debut, not a listing. Cinematic marketing, precision pricing,
+             and a network of qualified buyers come together to command the price your
+             property has earned.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt" id="communities">
+    <div class="wrap">
+      <p class="eyebrow reveal">Where We Work</p>
+      <h2 class="section-title reveal" style="--d:.08s">Communities We Serve</h2>
+      <ul class="community-grid">
+        <li class="reveal" style="--d:.10s"><span class="community-name">Marlboro</span><span class="community-sub">Monmouth County</span></li>
+        <li class="reveal" style="--d:.16s"><span class="community-name">Hoboken</span><span class="community-sub">Hudson County</span></li>
+        <li class="reveal" style="--d:.22s"><span class="community-name">Red Bank</span><span class="community-sub">Monmouth County</span></li>
+        <li class="reveal" style="--d:.28s"><span class="community-name">Asbury Park</span><span class="community-sub">Monmouth County</span></li>
+        <li class="reveal" style="--d:.34s"><span class="community-name">Colts Neck</span><span class="community-sub">Monmouth County</span></li>
+        <li class="reveal" style="--d:.40s"><span class="community-name">Holmdel</span><span class="community-sub">Monmouth County</span></li>
+        <li class="reveal" style="--d:.46s"><span class="community-name">East Brunswick</span><span class="community-sub">Middlesex County</span></li>
+        <li class="reveal" style="--d:.52s"><span class="community-name">Avon-By-The-Sea</span><span class="community-sub">Monmouth County</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" id="contact">
+    <div class="wrap contact-grid">
+      <div class="contact-info">
+        <p class="eyebrow reveal">Contact</p>
+        <h2 class="section-title reveal" style="--d:.08s">Begin the<br>Conversation</h2>
+        <p class="contact-copy reveal" style="--d:.16s">Whether you are searching for a home that
+           feels inevitable or preparing yours for the market, it starts with a conversation.</p>
+        <div class="contact-lines reveal" style="--d:.24s">
+          <a href="tel:+17327863838" class="contact-line"><span class="contact-label">Phone</span>(732) 786-3838</a>
+          <a href="mailto:info@newjerseyresidence.com" class="contact-line"><span class="contact-label">Email</span>info@newjerseyresidence.com</a>
+        </div>
+      </div>
+      <form id="contact-form" class="reveal" style="--d:.2s" novalidate>
+        <div class="field">
+          <label for="f-name">Name</label>
+          <input id="f-name" name="name" type="text" autocomplete="name" required>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="f-email">Email</label>
+            <input id="f-email" name="email" type="email" autocomplete="email" required>
+          </div>
+          <div class="field">
+            <label for="f-phone">Phone</label>
+            <input id="f-phone" name="phone" type="tel" autocomplete="tel">
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-message">Message</label>
+          <textarea id="f-message" name="message" rows="4" required></textarea>
+        </div>
+        <button class="btn-gold" type="submit">Send Message</button>
+        <p class="form-note" id="form-note" role="status"></p>
+      </form>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p class="footer-brand">Roman Balandin Realty</p>
+  <p class="footer-legal">&copy; 2026 Roman Balandin Realty &middot; All Rights Reserved &middot; newjerseyresidence.com</p>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
