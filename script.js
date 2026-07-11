@@ -6,27 +6,23 @@
 
   /* ---------------- Config ---------------- */
 
-  const TOTAL_FRAMES = 301;                       // extracted at 10 fps from tour.mp4
   const IS_MOBILE = window.matchMedia(
     '(max-width: 768px), ((pointer: coarse) and (max-width: 1024px))'
   ).matches;
-  const FRAME_STEP  = IS_MOBILE ? 2 : 1;          // mobile: load every other frame
-  const DPR_CAP     = IS_MOBILE ? 1 : 1.5;        // source is 1280x720 — nothing gained past this
+  /* Desktop: 1920x1080 frames at 10fps. Mobile: 1280x720 at 5fps (lighter). */
+  const FRAME_DIR   = IS_MOBILE ? 'frames-sm' : 'frames';
+  const N           = IS_MOBILE ? 150 : 301;
+  const DPR_CAP     = 2;                          // sharp on scaled/retina displays
   const CONCURRENCY = 12;                         // parallel image loads
   const REDUCED     = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* Decode-ahead window (pre-decoded ImageBitmaps around the playhead) */
   const HAS_IB      = typeof createImageBitmap === 'function';
-  const AHEAD       = IS_MOBILE ? 14 : 26;
-  const BEHIND      = IS_MOBILE ? 6  : 10;
+  const AHEAD       = IS_MOBILE ? 14 : 20;
+  const BEHIND      = IS_MOBILE ? 6  : 8;
   const MAX_DECODES = 4;
 
-  const framePath = n => 'frames/frame_' + String(n).padStart(4, '0') + '.jpg';
-
-  /* The frame numbers this device will actually use */
-  const frameNumbers = [];
-  for (let n = 1; n <= TOTAL_FRAMES; n += FRAME_STEP) frameNumbers.push(n);
-  const N = frameNumbers.length;
+  const framePath = i => FRAME_DIR + '/frame_' + String(i + 1).padStart(4, '0') + '.jpg';
 
   /* Reveal once the opening 45% is fully buffered and 60% overall is in —
      scrolling can no longer outrun the network. Rest streams in background. */
@@ -80,7 +76,7 @@
     img.decoding = 'async';
     img.onload  = () => settle(i, true,  img);
     img.onerror = () => settle(i, false, img);
-    img.src = framePath(frameNumbers[i]);
+    img.src = framePath(i);
   }
 
   function settle(i, ok, img) {
@@ -131,15 +127,7 @@
   function maybeDecode(idx) {
     if (bitmaps.has(idx) || !loadedFlags[idx] || pendingDecodes >= MAX_DECODES) return;
     pendingDecodes++;
-    let promise;
-    try {
-      promise = IS_MOBILE
-        ? createImageBitmap(images[idx], { resizeWidth: 960, resizeHeight: 540, resizeQuality: 'high' })
-        : createImageBitmap(images[idx]);
-    } catch (e) {
-      promise = createImageBitmap(images[idx]);
-    }
-    const p = promise.then(bm => {
+    const p = createImageBitmap(images[idx]).then(bm => {
       if (bitmaps.get(idx) === p) bitmaps.set(idx, bm);
       else bm.close();
     }).catch(() => {
@@ -178,28 +166,35 @@
 
   /* ---------------- Canvas ---------------- */
 
-  let stageW = 0, stageH = 0, scrollRange = 1;
+  let bw = 0, bh = 0, scrollRange = 1;
   let needsDraw = true;
 
   function measure() {
-    stageW = stage.clientWidth;
-    stageH = stage.clientHeight;
-    const dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
-    canvas.width  = Math.max(1, Math.round(stageW * dpr));
-    canvas.height = Math.max(1, Math.round(stageH * dpr));
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const cssW = stage.clientWidth;
+    const cssH = stage.clientHeight;
+    /* Backing beyond ~1.25x the 1080p source adds nothing visible —
+       cap it so draws stay cheap on scaled/4K displays. */
+    const capH = IS_MOBILE ? Infinity : 1350;
+    const dpr = Math.max(0.75, Math.min(
+      window.devicePixelRatio || 1, DPR_CAP, capH / Math.max(1, cssH)
+    ));
+    bw = Math.max(1, Math.round(cssW * dpr));
+    bh = Math.max(1, Math.round(cssH * dpr));
+    canvas.width  = bw;
+    canvas.height = bh;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    scrollRange = Math.max(1, filmSection.offsetHeight - stageH);
+    ctx.imageSmoothingQuality = 'medium';
+    scrollRange = Math.max(1, filmSection.offsetHeight - cssH);
     needsDraw = true;
   }
 
-  /* object-fit: cover */
+  /* object-fit: cover (backing-pixel space; pre-scaled bitmaps blit 1:1) */
   function coverDraw(src) {
     const iw = src.naturalWidth  || src.width;
     const ih = src.naturalHeight || src.height;
-    const s  = Math.max(stageW / iw, stageH / ih);
-    ctx.drawImage(src, (stageW - iw * s) / 2, (stageH - ih * s) / 2, iw * s, ih * s);
+    const s  = Math.max(bw / iw, bh / ih);
+    ctx.drawImage(src, (bw - iw * s) / 2, (bh - ih * s) / 2, iw * s, ih * s);
   }
 
   /* Nearest decoded frame if the exact one isn't in yet */
@@ -289,17 +284,22 @@
 
   function tick() {
     const p = Math.min(1, Math.max(0, window.scrollY / scrollRange));
-    const targetFrame = p * (N - 1);
-    const delta = targetFrame - current;
+    const exact = p * (N - 1);
+
+    /* When scrolling has (nearly) stopped, settle on a WHOLE frame —
+       resting on a fractional position would show two frames blended
+       (a permanent double exposure). Blend only exists while moving. */
+    const target = Math.abs(exact - current) < 0.6 ? Math.round(exact) : exact;
+    const delta = target - current;
 
     if (REDUCED) {
-      current = targetFrame;
+      current = Math.round(exact);
     } else {
       /* adaptive smoothing: glide on slow scrolls, snap on fast flicks
          so the film never trails the scroll wheel */
       const k = Math.min(0.5, 0.14 + Math.abs(delta) * 0.006);
       current += delta * k;
-      if (Math.abs(targetFrame - current) < 0.02) current = targetFrame;
+      if (Math.abs(target - current) < 0.02) current = target;
     }
 
     if (delta > 0.5) decodeDir = 1;
