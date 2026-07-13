@@ -10,14 +10,15 @@
     '(max-width: 768px), ((pointer: coarse) and (max-width: 1024px))'
   ).matches;
   const PORTRAIT = window.matchMedia('(orientation: portrait)').matches;
-  /* Frame sets from the 4K master:
-     desktop          frames/    722x 1920x1080 @24fps
-     mobile portrait  frames-p/  301x 1080x1920 @10fps  (native-sharp portrait)
-     mobile landscape frames-sm/ 301x 1280x720  @10fps
-     Portrait phones cover-fill for a full-screen, edge-to-edge, no-letterbox hero. */
+  /* Frame sets:
+     desktop          frames/    722x 1920x1080 @24fps  (from the 16:9 4K master)
+     mobile portrait  frames-p/  211x 1080x1920 @14fps  (NATIVE 9:16 tour — phone-composed)
+     mobile landscape frames-sm/ 301x 1280x720  @10fps  (from the 16:9 master)
+     The portrait set is a purpose-built vertical video, so phones get a
+     full-screen hero with nothing cropped. */
   const USE_P       = IS_MOBILE && PORTRAIT;
   const FRAME_DIR   = USE_P ? 'frames-p' : (IS_MOBILE ? 'frames-sm' : 'frames');
-  const N           = IS_MOBILE ? 301 : 722;      // full 24fps desktop, 10fps mobile
+  const N           = USE_P ? 211 : (IS_MOBILE ? 301 : 722);
   const EXT         = 'webp';
   const DPR_CAP     = 2;                          // sharp on scaled/retina displays
   const CONCURRENCY = 12;                         // parallel image loads
