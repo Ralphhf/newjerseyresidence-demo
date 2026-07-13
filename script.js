@@ -37,7 +37,10 @@
     });
   }
 
-  const framePath = i => FRAME_DIR + '/frame_' + String(i + 1).padStart(4, '0') + '.' + EXT;
+  /* Cache-buster: frame files keep the same names when re-encoded, so bump
+     this whenever the frames change to force fresh fetches past the CDN. */
+  const ASSET_V = 'v3';
+  const framePath = i => FRAME_DIR + '/frame_' + String(i + 1).padStart(4, '0') + '.' + EXT + '?' + ASSET_V;
 
   /* Two-pass loading: every other frame first (a complete half-rate film),
      then the in-between frames stream in behind. The site reveals as soon as
