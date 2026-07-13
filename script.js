@@ -10,15 +10,16 @@
     '(max-width: 768px), ((pointer: coarse) and (max-width: 1024px))'
   ).matches;
   const PORTRAIT = window.matchMedia('(orientation: portrait)').matches;
-  /* Frame sets:
-     desktop          frames/    722x 1920x1080 @24fps  (from the 16:9 4K master)
+  /* Frame sets (frame count kept modest so the browser's image cache never
+     blows up — 700+ decoded 1080p frames can crash a tab on real hardware):
+     desktop          frames/    301x 1920x1080 @10fps  (from the 16:9 4K master)
      mobile portrait  frames-p/  211x 1080x1920 @14fps  (NATIVE 9:16 tour — phone-composed)
      mobile landscape frames-sm/ 301x 1280x720  @10fps  (from the 16:9 master)
      The portrait set is a purpose-built vertical video, so phones get a
      full-screen hero with nothing cropped. */
   const USE_P       = IS_MOBILE && PORTRAIT;
   const FRAME_DIR   = USE_P ? 'frames-p' : (IS_MOBILE ? 'frames-sm' : 'frames');
-  const N           = USE_P ? 211 : (IS_MOBILE ? 301 : 722);
+  const N           = USE_P ? 211 : 301;
   const EXT         = 'webp';
   const DPR_CAP     = 2;                          // sharp on scaled/retina displays
   const CONCURRENCY = 12;                         // parallel image loads
@@ -39,7 +40,7 @@
 
   /* Cache-buster: frame files keep the same names when re-encoded, so bump
      this whenever the frames change to force fresh fetches past the CDN. */
-  const ASSET_V = 'v3';
+  const ASSET_V = 'v4';
   const framePath = i => FRAME_DIR + '/frame_' + String(i + 1).padStart(4, '0') + '.' + EXT + '?' + ASSET_V;
 
   /* Two-pass loading: every other frame first (a complete half-rate film),
