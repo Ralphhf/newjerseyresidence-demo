@@ -43,17 +43,15 @@
   const ASSET_V = 'v4';
   const framePath = i => FRAME_DIR + '/frame_' + String(i + 1).padStart(4, '0') + '.' + EXT + '?' + ASSET_V;
 
-  /* Two-pass loading: every other frame first (a complete half-rate film),
-     then the in-between frames stream in behind. The site reveals as soon as
-     the half-rate film covers the opening stretch — quality then climbs to
-     full frame rate within seconds while you watch. */
-  const loadOrder = [];
-  for (let i = 0; i < N; i += 2) loadOrder.push(i);
-  for (let i = 1; i < N; i += 2) loadOrder.push(i);
-
-  /* Gate on COVERAGE: a frame counts as watchable if it or a neighbor is in */
-  const GATE_PREFIX = Math.ceil(N * 0.45);   // covered prefix required
-  const GATE_TOTAL  = Math.ceil(N * 0.32);   // ~60% of the first pass
+  /* Sliding-window loading: only frames near the playhead are held in memory;
+     the rest are released so the browser's image cache can never balloon and
+     crash the tab (700+ decoded 1080p frames would). Memory stays ~constant
+     regardless of film length. */
+  const LOAD_BEHIND = IS_MOBILE ? 10 : 16;   // preload this far back
+  const LOAD_AHEAD  = IS_MOBILE ? 26 : 44;   // …and this far ahead
+  const KEEP_BEHIND = LOAD_BEHIND + 12;      // evict past this
+  const KEEP_AHEAD  = LOAD_AHEAD  + 16;
+  const GATE_N      = Math.min(N, LOAD_AHEAD);  // frames needed to reveal
 
   /* ---------------- Elements ---------------- */
 
@@ -81,13 +79,12 @@
 
   const images      = new Array(N);
   const loadedFlags = new Uint8Array(N);
-  let loadedCount = 0;   // successfully decoded
-  let settled     = 0;   // load OR error — loader can never stall
-  let contig      = 0;   // contiguous loaded prefix
-  let nextToQueue = 0;
+  const loading     = new Uint8Array(N);   // in-flight, to avoid duplicate loads
+  let loadedCount = 0;
   let inFlight    = 0;
   let revealed    = false;
   let shownPct    = 0;
+  let loadCenter  = 0;   // window centre: 0 until revealed, then the playhead
 
   function setLoaderPct(v) {
     if (v <= shownPct) return;
@@ -98,6 +95,7 @@
 
   function loadOne(i) {
     inFlight++;
+    loading[i] = 1;
     const img = new Image();
     img.decoding = 'async';
     img.onload  = () => settle(i, true,  img);
@@ -105,37 +103,60 @@
     img.src = framePath(i);
   }
 
-  /* Contiguous run of WATCHABLE frames (the frame or a direct neighbor is in) */
-  function coveredPrefix() {
-    let c = 0;
-    while (c < N && (loadedFlags[c] ||
-           (c > 0 && loadedFlags[c - 1]) ||
-           (c + 1 < N && loadedFlags[c + 1]))) c++;
-    return c;
-  }
-
   function settle(i, ok, img) {
     inFlight--;
-    settled++;
+    loading[i] = 0;
     if (ok) {
       images[i] = img;
       loadedFlags[i] = 1;
       loadedCount++;
-      if (i === 0) needsDraw = true;               // paint frame 1 behind the loader
+      if (i === Math.round(loadCenter)) needsDraw = true;
     }
-    setLoaderPct(Math.floor((settled / N) * 100));
     if (!revealed) {
-      contig = coveredPrefix();
-      if ((contig >= GATE_PREFIX && loadedCount >= GATE_TOTAL) || settled === N) {
-        revealed = true;
-        finishLoader();
-      }
+      let n0 = 0; while (n0 < N && loadedFlags[n0]) n0++;   // contiguous from 0
+      setLoaderPct(Math.floor(Math.min(1, n0 / GATE_N) * 100));
+      if (loadedFlags[0] && n0 >= GATE_N) { revealed = true; finishLoader(); }
     }
     pump();
   }
 
+  /* Load un-loaded frames inside the window, nearest to the playhead first. */
   function pump() {
-    while (inFlight < CONCURRENCY && nextToQueue < N) loadOne(loadOrder[nextToQueue++]);
+    if (inFlight >= CONCURRENCY) return;
+    const c  = Math.round(loadCenter);
+    const lo = Math.max(0, c - LOAD_BEHIND);
+    const hi = Math.min(N - 1, c + LOAD_AHEAD);
+    for (let d = 0; d <= hi - lo; d++) {
+      for (const i of (d === 0 ? [c] : [c + d, c - d])) {
+        if (i < lo || i > hi) continue;
+        if (!loadedFlags[i] && !loading[i]) {
+          loadOne(i);
+          if (inFlight >= CONCURRENCY) return;
+        }
+      }
+    }
+  }
+
+  /* Release frames (and their bitmaps) outside the keep-window so decoded
+     image memory stays bounded — this is what prevents the tab crash. */
+  function evict(c) {
+    const lo = c - KEEP_BEHIND, hi = c + KEEP_AHEAD;
+    for (let i = 0; i < N; i++) {
+      if (loadedFlags[i] && (i < lo || i > hi)) {
+        images[i] = null;
+        loadedFlags[i] = 0;
+        loadedCount--;
+        const bm = bitmaps.get(i);
+        if (bm) { if (typeof bm.close === 'function') bm.close(); bitmaps.delete(i); }
+      }
+    }
+  }
+
+  /* Called every frame from the render loop: recentre the window, evict, load */
+  function manageLoad() {
+    loadCenter = revealed ? current : 0;
+    evict(Math.round(loadCenter));
+    pump();
   }
 
   /* Sweep the counter to 100, then fade the loader and unlock scrolling */
@@ -358,7 +379,8 @@
 
     if (delta > 0.5) decodeDir = 1;
     else if (delta < -0.5) decodeDir = -1;
-    ensureWindow(Math.round(current));
+    manageLoad();                      // slide the loaded-frame window + evict
+    ensureWindow(Math.round(current)); // pre-decode bitmaps around the playhead
 
     if (needsDraw || Math.abs(current - lastDrawnPos) > 0.003) {
       if (drawBlended(current)) {
@@ -572,7 +594,7 @@
 
   /* Tiny state hook for debugging / automated checks */
   window.__rbState = () => ({
-    frames: N, dir: FRAME_DIR, loaded: loadedCount, settled, contig, revealed,
+    frames: N, dir: FRAME_DIR, live: loadedCount, revealed,
     drawnIndex: Math.round(lastDrawnPos), current: +current.toFixed(2),
     bitmaps: bitmaps.size, canvas: canvas.width + 'x' + canvas.height,
     scrollY: window.scrollY, scrollRange
