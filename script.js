@@ -10,12 +10,13 @@
     '(max-width: 768px), ((pointer: coarse) and (max-width: 1024px))'
   ).matches;
   const PORTRAIT = window.matchMedia('(orientation: portrait)').matches;
-  /* Three frame sets, all cut from the 4K master:
-     desktop         frames/    301x 1920x1080 @10fps
-     mobile portrait frames-p/  150x 1080x1920 @5fps (center 9:16 crop — native-sharp)
-     mobile landscape frames-sm/ 150x 1280x720 @5fps                                   */
-  const USE_P       = IS_MOBILE && PORTRAIT;
-  const FRAME_DIR   = USE_P ? 'frames-p' : (IS_MOBILE ? 'frames-sm' : 'frames');
+  /* Frame sets from the 4K master:
+     desktop  frames/    722x 1920x1080 @24fps
+     mobile   frames-sm/ 301x 1280x720  @10fps  (FULL 16:9 scene — nothing cropped)
+     Portrait phones render this full frame fit-to-width so the WHOLE scene
+     shows edge to edge, letterboxed — never a center crop that hides the sides. */
+  const USE_P       = IS_MOBILE && PORTRAIT;      // portrait → fit-width (letterbox)
+  const FRAME_DIR   = IS_MOBILE ? 'frames-sm' : 'frames';
   const N           = IS_MOBILE ? 301 : 722;      // full 24fps desktop, 10fps mobile
   const EXT         = 'webp';
   const DPR_CAP     = 2;                          // sharp on scaled/retina displays
