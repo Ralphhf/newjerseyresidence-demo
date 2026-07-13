@@ -52,6 +52,14 @@
   const KEEP_AHEAD  = LOAD_AHEAD  + (IS_MOBILE ? 12 : 20);
   const GATE_N      = Math.min(N, IS_MOBILE ? 26 : 40);      // frames needed to reveal
 
+  /* Desktop safety net: a sparse "backbone" (every 3rd frame) is loaded once
+     and never evicted, so even a violent scroll that outruns the network
+     always finds a frame within 1 index — no more frozen/jumpy stretches.
+     Backbone images are kept compressed (cheap); only windowed frames get
+     pre-decoded bitmaps, so memory stays bounded. */
+  const BACKBONE_STEP = 3;
+  const isBackbone = i => !IS_MOBILE && i % BACKBONE_STEP === 0;
+
   /* ---------------- Elements ---------------- */
 
   const canvas      = document.getElementById('film');
@@ -119,7 +127,8 @@
     pump();
   }
 
-  /* Load un-loaded frames inside the window, nearest to the playhead first. */
+  /* Load un-loaded frames inside the window (nearest to the playhead first),
+     then trickle in the backbone across the whole film. */
   function pump() {
     if (inFlight >= CONCURRENCY) return;
     const c  = Math.round(loadCenter);
@@ -134,17 +143,28 @@
         }
       }
     }
+    if (!IS_MOBILE) {
+      for (let i = 0; i < N; i += BACKBONE_STEP) {
+        if (!loadedFlags[i] && !loading[i]) {
+          loadOne(i);
+          if (inFlight >= CONCURRENCY) return;
+        }
+      }
+    }
   }
 
   /* Release frames (and their bitmaps) outside the keep-window so decoded
-     image memory stays bounded — this is what prevents the tab crash. */
+     image memory stays bounded — backbone images are kept (compressed, cheap)
+     so there is always a nearby frame no matter how fast the user scrolls. */
   function evict(c) {
     const lo = c - KEEP_BEHIND, hi = c + KEEP_AHEAD;
     for (let i = 0; i < N; i++) {
       if (loadedFlags[i] && (i < lo || i > hi)) {
-        images[i] = null;
-        loadedFlags[i] = 0;
-        loadedCount--;
+        if (!isBackbone(i)) {
+          images[i] = null;
+          loadedFlags[i] = 0;
+          loadedCount--;
+        }
         const bm = bitmaps.get(i);
         if (bm) { if (typeof bm.close === 'function') bm.close(); bitmaps.delete(i); }
       }
@@ -229,11 +249,15 @@
   function measure() {
     const cssW = stage.clientWidth;
     const cssH = stage.clientHeight;
-    /* Backing beyond ~1.25x the 1080p source adds nothing visible —
-       cap it so draws stay cheap on scaled/4K displays. */
-    const capH = IS_MOBILE ? Infinity : 1350;
-    const dpr = Math.max(0.75, Math.min(
-      window.devicePixelRatio || 1, DPR_CAP, capH / Math.max(1, cssH)
+    /* Desktop: cap the backing at the SOURCE resolution (1600x900) so every
+       draw is a 1:1 blit or slight downscale — never an upscale. Upscaling
+       per-draw costs GPU fill for zero added detail; the compositor stretches
+       the canvas to the viewport for free. Mobile: unchanged. */
+    const capW = IS_MOBILE ? Infinity : 1600;
+    const capH = IS_MOBILE ? Infinity : 900;
+    const dpr = Math.max(0.5, Math.min(
+      window.devicePixelRatio || 1, DPR_CAP,
+      capW / Math.max(1, cssW), capH / Math.max(1, cssH)
     ));
     bw = Math.max(1, Math.round(cssW * dpr));
     bh = Math.max(1, Math.round(cssH * dpr));
@@ -274,15 +298,19 @@
     return -1;
   }
 
-  /* Cross-fade between the two frames around the fractional playhead —
-     10fps stills read as continuous, motion-blurred film. */
-  function drawBlended(pos) {
+  /* Cross-fade between the two frames around the fractional playhead.
+     Desktop: skip the second (blend) draw when scrubbing fast — frames change
+     so quickly the crossfade is invisible, and it halves the draw cost exactly
+     when the machine is working hardest. Also skipped when the perf governor
+     has flagged the machine as slow. */
+  function drawBlended(pos, vel) {
     const i = Math.floor(pos);
     const j = Math.min(N - 1, i + 1);
     const f = pos - i;
 
+    const wantBlend = IS_MOBILE || (!perfLow && Math.abs(vel || 0) < 2.5);
     let si = frameSource(i);
-    let sj = (f > 0.02 && j !== i) ? frameSource(j) : null;
+    let sj = (wantBlend && f > 0.02 && j !== i) ? frameSource(j) : null;
 
     if (!si) {
       const nb = nearestLoaded(i);
@@ -322,6 +350,7 @@
   }
 
   let btnActive = false;
+  let lastScrimOp = "";
 
   function updateOverlays(p) {
     let maxOp = 0;
@@ -341,7 +370,8 @@
         o.el.style.transform = 'translate3d(0,' + off.toFixed(1) + 'px,0)';
       }
     }
-    scrim.style.opacity = (maxOp * 0.55).toFixed(3);
+    const scrimOp = (maxOp * 0.55).toFixed(3);
+    if (scrimOp !== lastScrimOp) { lastScrimOp = scrimOp; scrim.style.opacity = scrimOp; }
 
     const act = finale._op > 0.5;
     if (act !== btnActive) {
@@ -355,8 +385,22 @@
 
   let current = 0;            // smoothed fractional frame index
   let lastDrawnPos = -1;
+  let prevCurrent = 0;        // for per-tick velocity
+  let perfLow = false;        // governor: one-way degrade on slow machines
+  let emaDt = 16, lastT = 0, warmTicks = 0;
 
-  function tick() {
+  function tick(t) {
+    /* Perf governor (desktop): if sustained frame times stay high, drop the
+       crossfade permanently — halves draw cost on machines that need it. */
+    if (!IS_MOBILE && lastT) {
+      const dt = t - lastT;
+      if (dt > 4 && dt < 100) {
+        emaDt = emaDt * 0.95 + dt * 0.05;
+        if (++warmTicks > 90 && !perfLow && emaDt > 26) perfLow = true;
+      }
+    }
+    lastT = t;
+
     const p = Math.min(1, Math.max(0, window.scrollY / scrollRange));
     const exact = p * (N - 1);
 
@@ -375,6 +419,8 @@
       current += delta * k;
       if (Math.abs(target - current) < 0.02) current = target;
     }
+    const vel = current - prevCurrent;
+    prevCurrent = current;
 
     if (delta > 0.5) decodeDir = 1;
     else if (delta < -0.5) decodeDir = -1;
@@ -382,7 +428,7 @@
     ensureWindow(Math.round(current)); // pre-decode bitmaps around the playhead
 
     if (needsDraw || Math.abs(current - lastDrawnPos) > 0.003) {
-      if (drawBlended(current)) {
+      if (drawBlended(current, vel)) {
         lastDrawnPos = current;
         needsDraw = false;
       }
@@ -593,7 +639,8 @@
 
   /* Tiny state hook for debugging / automated checks */
   window.__rbState = () => ({
-    frames: N, dir: FRAME_DIR, live: loadedCount, revealed,
+    frames: N, dir: FRAME_DIR, live: loadedCount, revealed, perfLow,
+    emaDt: +emaDt.toFixed(1),
     drawnIndex: Math.round(lastDrawnPos), current: +current.toFixed(2),
     bitmaps: bitmaps.size, canvas: canvas.width + 'x' + canvas.height,
     scrollY: window.scrollY, scrollRange
