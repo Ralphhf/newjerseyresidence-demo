@@ -52,13 +52,18 @@
   const KEEP_AHEAD  = LOAD_AHEAD  + (IS_MOBILE ? 12 : 20);
   const GATE_N      = Math.min(N, IS_MOBILE ? 26 : 40);      // frames needed to reveal
 
-  /* Desktop safety net: a sparse "backbone" (every 3rd frame) is loaded once
-     and never evicted, so even a violent scroll that outruns the network
-     always finds a frame within 1 index — no more frozen/jumpy stretches.
-     Backbone images are kept compressed (cheap); only windowed frames get
-     pre-decoded bitmaps, so memory stays bounded. */
-  const BACKBONE_STEP = 3;
-  const isBackbone = i => !IS_MOBILE && i % BACKBONE_STEP === 0;
+  /* Desktop: FULL PRELOAD — every frame is fetched up front (evens first for
+     a quick reveal, odds fill in behind), so scrolling never touches the
+     network and is perfectly smooth. Costs a longer initial loader; accepted
+     tradeoff. Mobile keeps the streaming window (working well there). */
+  const FULL_PRELOAD = !IS_MOBILE;
+  const loadOrder = [];
+  if (FULL_PRELOAD) {
+    for (let i = 0; i < N; i += 2) loadOrder.push(i);
+    for (let i = 1; i < N; i += 2) loadOrder.push(i);
+  }
+  const GATE_PREFIX = Math.ceil(N * 0.45);   // covered prefix required (desktop)
+  const GATE_TOTAL  = Math.ceil(N * 0.32);   // ~60% of the even pass (desktop)
 
   /* ---------------- Elements ---------------- */
 
@@ -110,26 +115,52 @@
     img.src = framePath(i);
   }
 
+  let nextToQueue = 0;   // desktop full-preload queue position
+  let settledCount = 0;  // loads attempted (ok or error) — loader can't stall
+
+  /* Contiguous run of WATCHABLE frames (the frame or a direct neighbor is in) */
+  function coveredPrefix() {
+    let c = 0;
+    while (c < N && (loadedFlags[c] ||
+           (c > 0 && loadedFlags[c - 1]) ||
+           (c + 1 < N && loadedFlags[c + 1]))) c++;
+    return c;
+  }
+
   function settle(i, ok, img) {
     inFlight--;
     loading[i] = 0;
+    settledCount++;
     if (ok) {
       images[i] = img;
       loadedFlags[i] = 1;
       loadedCount++;
-      if (i === Math.round(loadCenter)) needsDraw = true;
+      if (i === 0 || i === Math.round(loadCenter)) needsDraw = true;
     }
     if (!revealed) {
-      let n0 = 0; while (n0 < N && loadedFlags[n0]) n0++;   // contiguous from 0
-      setLoaderPct(Math.floor(Math.min(1, n0 / GATE_N) * 100));
-      if (loadedFlags[0] && n0 >= GATE_N) { revealed = true; finishLoader(); }
+      if (FULL_PRELOAD) {
+        setLoaderPct(Math.floor((settledCount / N) * 100));
+        if ((coveredPrefix() >= GATE_PREFIX && loadedCount >= GATE_TOTAL) ||
+            settledCount === N) { revealed = true; finishLoader(); }
+      } else {
+        let n0 = 0; while (n0 < N && loadedFlags[n0]) n0++;   // contiguous from 0
+        setLoaderPct(Math.floor(Math.min(1, n0 / GATE_N) * 100));
+        if (loadedFlags[0] && n0 >= GATE_N) { revealed = true; finishLoader(); }
+      }
     }
     pump();
   }
 
-  /* Load un-loaded frames inside the window (nearest to the playhead first),
-     then trickle in the backbone across the whole film. */
   function pump() {
+    if (FULL_PRELOAD) {
+      /* march through the interleaved queue until everything is in */
+      while (inFlight < CONCURRENCY && nextToQueue < N) {
+        const i = loadOrder[nextToQueue++];
+        if (!loadedFlags[i] && !loading[i]) loadOne(i);
+      }
+      return;
+    }
+    /* Mobile: load un-loaded frames inside the window, nearest first */
     if (inFlight >= CONCURRENCY) return;
     const c  = Math.round(loadCenter);
     const lo = Math.max(0, c - LOAD_BEHIND);
@@ -143,39 +174,30 @@
         }
       }
     }
-    if (!IS_MOBILE) {
-      for (let i = 0; i < N; i += BACKBONE_STEP) {
-        if (!loadedFlags[i] && !loading[i]) {
-          loadOne(i);
-          if (inFlight >= CONCURRENCY) return;
-        }
-      }
-    }
   }
 
-  /* Release frames (and their bitmaps) outside the keep-window so decoded
-     image memory stays bounded — backbone images are kept (compressed, cheap)
-     so there is always a nearby frame no matter how fast the user scrolls. */
+  /* Mobile only: release frames outside the keep-window so decoded image
+     memory stays bounded on phones. Desktop keeps everything (full preload). */
   function evict(c) {
     const lo = c - KEEP_BEHIND, hi = c + KEEP_AHEAD;
     for (let i = 0; i < N; i++) {
       if (loadedFlags[i] && (i < lo || i > hi)) {
-        if (!isBackbone(i)) {
-          images[i] = null;
-          loadedFlags[i] = 0;
-          loadedCount--;
-        }
+        images[i] = null;
+        loadedFlags[i] = 0;
+        loadedCount--;
         const bm = bitmaps.get(i);
         if (bm) { if (typeof bm.close === 'function') bm.close(); bitmaps.delete(i); }
       }
     }
   }
 
-  /* Called every frame from the render loop: recentre the window, evict, load */
+  /* Called every frame from the render loop */
   function manageLoad() {
     loadCenter = revealed ? current : 0;
-    evict(Math.round(loadCenter));
-    pump();
+    if (!FULL_PRELOAD) {
+      evict(Math.round(loadCenter));
+      pump();
+    }
   }
 
   /* Sweep the counter to 100, then fade the loader and unlock scrolling */
@@ -390,9 +412,11 @@
   let emaDt = 16, lastT = 0, warmTicks = 0;
 
   function tick(t) {
-    /* Perf governor (desktop): if sustained frame times stay high, drop the
-       crossfade permanently — halves draw cost on machines that need it. */
-    if (!IS_MOBILE && lastT) {
+    /* Perf governor (desktop): if sustained frame times stay high AFTER the
+       preload has finished, drop the crossfade permanently — halves draw cost
+       on machines that need it. Sampling only when idle-loaded so the initial
+       download can never falsely trip it. */
+    if (!IS_MOBILE && lastT && revealed && inFlight === 0) {
       const dt = t - lastT;
       if (dt > 4 && dt < 100) {
         emaDt = emaDt * 0.95 + dt * 0.05;
