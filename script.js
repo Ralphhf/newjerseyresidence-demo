@@ -226,11 +226,15 @@
     needsDraw = true;
   }
 
-  /* object-fit: cover (backing-pixel space; pre-scaled bitmaps blit 1:1) */
+  /* Desktop/landscape: object-fit: cover (fills viewport, may crop).
+     Mobile portrait: fit-width so the FULL frame width is always visible,
+     letterboxed top/bottom in the site's black. */
+  const FIT_WIDTH = USE_P;
+
   function coverDraw(src) {
     const iw = src.naturalWidth  || src.width;
     const ih = src.naturalHeight || src.height;
-    const s  = Math.max(bw / iw, bh / ih);
+    const s  = FIT_WIDTH ? (bw / iw) : Math.max(bw / iw, bh / ih);
     ctx.drawImage(src, (bw - iw * s) / 2, (bh - ih * s) / 2, iw * s, ih * s);
   }
 
@@ -260,6 +264,13 @@
       si = frameSource(nb);
       sj = null;
       if (!si) return false;
+    }
+
+    /* fit-width leaves letterbox bars — paint them the site background */
+    if (FIT_WIDTH) {
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#0a0a0a';
+      ctx.fillRect(0, 0, bw, bh);
     }
 
     ctx.globalAlpha = 1;
@@ -490,6 +501,58 @@
       el.addEventListener('change', recalc);
     });
     recalc();
+  }
+
+  /* ---- Home-value estimator ---- */
+  const estEls = {
+    town:  document.getElementById('e-town'),
+    sqft:  document.getElementById('e-sqft'),
+    beds:  document.getElementById('e-beds'),
+    baths: document.getElementById('e-baths'),
+    cond:  document.getElementById('e-condition'),
+    value: document.getElementById('estimate-value'),
+    range: document.getElementById('estimate-range'),
+    ppsf:  document.getElementById('estimate-ppsf'),
+  };
+
+  function round1000(n) { return Math.round(n / 1000) * 1000; }
+
+  function estimate() {
+    const ppsf = parseFloat(estEls.town.value) || 0;
+    const sqft = Math.max(0, parseFloat(estEls.sqft.value) || 0);
+    const beds = parseInt(estEls.beds.value, 10) || 3;
+    const baths = parseFloat(estEls.baths.value) || 2;
+    const cond = parseFloat(estEls.cond.value) || 1;
+
+    /* bed/bath nudge around a 3-bed / 2-bath baseline, gently clamped */
+    let adj = 1 + (beds - 3) * 0.03 + (baths - 2) * 0.02;
+    adj = Math.max(0.85, Math.min(1.2, adj));
+
+    const value = sqft * ppsf * cond * adj;
+    estEls.value.textContent = money(round1000(value));
+    estEls.range.textContent = value > 0
+      ? money(round1000(value * 0.93)) + ' – ' + money(round1000(value * 1.07))
+      : '—';
+    estEls.ppsf.textContent = sqft > 0 ? money(value / sqft) : '$0';
+  }
+
+  if (estEls.town) {
+    [estEls.town, estEls.sqft, estEls.beds, estEls.baths, estEls.cond].forEach(el => {
+      el.addEventListener('input', estimate);
+      el.addEventListener('change', estimate);
+    });
+    estimate();
+
+    const estForm = document.getElementById('estimate-form');
+    estForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const townName = estEls.town.options[estEls.town.selectedIndex].dataset.name || '';
+      estForm.reset();
+      const note = document.getElementById('estimate-note');
+      note.textContent = 'Thank you — Roman’s team will send your full ' + townName +
+        ' valuation within one business day.';
+      note.classList.add('show');
+    });
   }
 
   const form = document.getElementById('contact-form');

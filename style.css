@@ -601,6 +601,237 @@ a { color: inherit; text-decoration: none; }
   color: var(--gold) !important;
 }
 
+/* ---- Primary action band (right after the film) ---- */
+
+.actions {
+  padding: clamp(3.5rem, 7vh, 5.5rem) 1.75rem;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.6rem;
+}
+
+.action-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  padding: clamp(2rem, 3.2vw, 2.8rem);
+  overflow: hidden;
+  transition: border-color .6s var(--ease), transform 1s var(--ease), opacity 1s var(--ease);
+  transition-delay: var(--d, 0s);
+}
+.action-card:hover { border-color: var(--gold); transform: translateY(-6px); transition-delay: 0s; }
+.action-card::after {
+  content: "";
+  position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+  background: var(--gold);
+  transform: scaleX(0); transform-origin: left;
+  transition: transform .55s var(--ease);
+}
+.action-card:hover::after { transform: none; }
+
+.action-card--gold {
+  background: linear-gradient(160deg, rgba(201,164,92,.14), rgba(201,164,92,.03));
+  border-color: var(--gold-soft);
+}
+
+.action-index {
+  font-family: var(--serif);
+  font-size: 13px; letter-spacing: .3em;
+  color: var(--gold);
+  margin-bottom: 1.1rem;
+}
+
+.action-card h3 {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: clamp(1.6rem, 2.6vw, 2.1rem);
+  letter-spacing: .02em;
+  margin-bottom: .9rem;
+}
+
+.action-card p { color: var(--muted); font-size: 14.5px; margin-bottom: 1.8rem; }
+
+.action-cta {
+  margin-top: auto;
+  font-size: 11px;
+  letter-spacing: .32em; text-indent: .32em;
+  text-transform: uppercase;
+  color: var(--ink);
+  transition: color .45s var(--ease);
+}
+.action-card:hover .action-cta { color: var(--gold); }
+.action-cta span { transition: margin-left .45s var(--ease); }
+.action-card:hover .action-cta span { margin-left: .35em; }
+
+/* ---- Find a Home ---- */
+
+.find-lead {
+  color: var(--muted);
+  font-size: 16.5px;
+  max-width: 60ch;
+  margin-bottom: clamp(2.6rem, 5vh, 3.6rem);
+}
+.find-lead strong { color: var(--gold); font-weight: 400; }
+
+.pillars {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+  margin-bottom: clamp(2.6rem, 5vh, 3.6rem);
+}
+
+.pillar { padding-top: 1.4rem; border-top: 1px solid var(--gold-soft); }
+
+.pillar-label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: .4em; text-indent: .4em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 1rem;
+}
+.pillar p { color: var(--muted); font-size: 14.5px; }
+
+.find-cta { display: flex; flex-wrap: wrap; gap: 1.2rem; }
+
+.btn-ghost {
+  display: inline-flex; align-items: center;
+  padding: 1.15em 2.6em;
+  border: 1px solid rgba(245,242,236,.25);
+  color: var(--ink);
+  font-size: 11px; letter-spacing: .38em; text-indent: .38em;
+  text-transform: uppercase;
+  transition: border-color .45s var(--ease), color .45s var(--ease);
+}
+.btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
+
+/* ---- Home-value estimator ---- */
+
+.estimate-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(3rem, 7vw, 6rem);
+  align-items: start;
+}
+
+.estimate-copy { color: var(--muted); max-width: 42ch; margin-bottom: 2.6rem; }
+
+.estimate-fields { display: flex; flex-direction: column; gap: 1.9rem; }
+
+.estimate-fields select,
+.estimate-fields input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(245, 242, 236, .22);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-weight: 300;
+  font-size: 15px;
+  padding: .65rem 0;
+  border-radius: 0;
+  transition: border-color .45s var(--ease);
+}
+.estimate-fields select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23c9a45c' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right .2rem center;
+  cursor: pointer;
+}
+.estimate-fields select:focus,
+.estimate-fields input:focus { outline: none; border-bottom-color: var(--gold); }
+.estimate-fields select option { background: #101010; color: var(--ink); }
+.estimate-fields input[type="number"]::-webkit-outer-spin-button,
+.estimate-fields input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.estimate-fields input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
+.estimate-result {
+  background: var(--panel);
+  border: 1px solid var(--gold-soft);
+  padding: clamp(2.4rem, 4vw, 3.4rem);
+  text-align: center;
+  position: sticky;
+  top: 6rem;
+}
+
+.estimate-label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: .4em; text-indent: .4em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 1.1rem;
+}
+
+.estimate-value {
+  display: block;
+  font-family: var(--serif);
+  font-weight: 300;
+  font-size: clamp(3rem, 6vw, 4.6rem);
+  line-height: 1.02;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.estimate-range {
+  display: block;
+  margin-top: .8rem;
+  font-size: 13px;
+  letter-spacing: .05em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.estimate-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 2rem 0;
+  padding: 1.6rem 0;
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+}
+.estimate-meta dt {
+  font-size: 10px;
+  letter-spacing: .3em; text-indent: .3em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: .4rem;
+}
+.estimate-meta dd {
+  font-family: var(--serif);
+  font-size: 1.3rem;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+#estimate-form { display: flex; flex-direction: column; gap: 1.3rem; text-align: left; }
+.estimate-cta-label {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.05rem;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: .3rem;
+}
+#estimate-form .field input {
+  width: 100%;
+  background: transparent; border: none;
+  border-bottom: 1px solid rgba(245,242,236,.22);
+  color: var(--ink); font-family: var(--sans); font-weight: 300; font-size: 15px;
+  padding: .6rem 0; border-radius: 0;
+  transition: border-color .45s var(--ease);
+}
+#estimate-form .field input:focus { outline: none; border-bottom-color: var(--gold); }
+#estimate-form .btn-gold { margin-top: .5rem; align-self: stretch; text-align: center; justify-content: center; }
+
 /* ---- Programs (More Ways We Serve) ---- */
 
 .program-grid {
@@ -1039,11 +1270,16 @@ footer {
   .insight-grid { grid-template-columns: 1fr; max-width: 480px; margin: 0 auto; }
   .calc-grid { grid-template-columns: 1fr; }
   .calc-result { position: static; }
+  .action-grid { grid-template-columns: 1fr; max-width: 480px; margin: 0 auto; }
+  .pillars { grid-template-columns: 1fr; gap: 2.2rem; max-width: 520px; }
+  .estimate-grid { grid-template-columns: 1fr; }
+  .estimate-result { position: static; }
 }
 
 @media (max-width: 620px) {
   .program-grid { grid-template-columns: 1fr; }
   .faq-q { font-size: 1.12rem; }
+  .find-cta .btn-gold, .find-cta .btn-ghost { flex: 1 1 auto; justify-content: center; text-align: center; }
 }
 
 @media (max-width: 768px) {

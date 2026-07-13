@@ -67,6 +67,32 @@
 <!-- ============ Content ============ -->
 <main id="main">
 
+  <!-- Three primary actions — first thing after the film -->
+  <section class="actions" id="actions" aria-label="Primary actions">
+    <div class="wrap">
+      <div class="action-grid">
+        <a class="action-card reveal" style="--d:.05s" href="#estimate">
+          <span class="action-index">01</span>
+          <h3>Sell My Home</h3>
+          <p>Get precision pricing and a cinematic marketing plan that commands top dollar.</p>
+          <span class="action-cta">Start Selling <span aria-hidden="true">&rarr;</span></span>
+        </a>
+        <a class="action-card reveal" style="--d:.16s" href="#find-a-home">
+          <span class="action-index">02</span>
+          <h3>Find a Home</h3>
+          <p>Search New Jersey&rsquo;s market with off-market access and full buyer representation &mdash; at no cost to you.</p>
+          <span class="action-cta">Browse Homes <span aria-hidden="true">&rarr;</span></span>
+        </a>
+        <a class="action-card action-card--gold reveal" style="--d:.27s" href="#estimate">
+          <span class="action-index">03</span>
+          <h3>Free Home Estimate</h3>
+          <p>How much is your home worth? Get an instant, data-driven value in seconds.</p>
+          <span class="action-cta">Get My Estimate <span aria-hidden="true">&rarr;</span></span>
+        </a>
+      </div>
+    </div>
+  </section>
+
   <section class="section stats-band" id="stats">
     <div class="wrap">
       <span class="line-draw" aria-hidden="true"></span>
@@ -146,6 +172,126 @@
              guidance, and negotiation committed to the best possible terms.</p>
           <p class="card-highlight">Your property, showcased to a global network of buyers.</p>
         </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="find-a-home">
+    <div class="wrap">
+      <p class="eyebrow reveal">Find a Home</p>
+      <h2 class="section-title reveal" style="--d:.08s">Your Search Starts Here</h2>
+      <p class="find-lead reveal" style="--d:.14s">Every active listing across New Jersey &mdash; plus
+         off-market opportunities you won&rsquo;t find anywhere else. It&rsquo;s our job to look after
+         your best interests, and we do so <strong>at no cost to you as the buyer.</strong></p>
+      <div class="pillars">
+        <article class="pillar reveal" style="--d:.10s">
+          <span class="pillar-label">Strategic</span>
+          <p>Relationships with multiple mortgage lenders and financing programs so attractive that
+             cash buyers choose to finance.</p>
+        </article>
+        <article class="pillar reveal" style="--d:.20s">
+          <span class="pillar-label">Professional</span>
+          <p>Partnerships with vetted service providers and builders, backed by deep localized
+             expertise across every community we serve.</p>
+        </article>
+        <article class="pillar reveal" style="--d:.30s">
+          <span class="pillar-label">Loyal</span>
+          <p>An experienced team that makes sure you pay competitive market rates &mdash; maximizing
+             the value of your purchase.</p>
+        </article>
+      </div>
+      <div class="find-cta reveal" style="--d:.36s">
+        <a class="btn-gold" href="https://homesearch.newjerseyresidence.com" target="_blank" rel="noopener">Search All NJ Listings</a>
+        <a class="btn-ghost" href="#contact">Talk to an Agent</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt" id="estimate">
+    <div class="wrap estimate-grid">
+      <div class="estimate-intro">
+        <p class="eyebrow reveal">Free Home Estimate</p>
+        <h2 class="section-title reveal" style="--d:.08s">What&rsquo;s Your<br>Home Worth?</h2>
+        <p class="estimate-copy reveal" style="--d:.16s">Answer four quick questions for an instant,
+           data-driven estimate built on New Jersey sales trends. For a precise, expert valuation,
+           we&rsquo;ll follow up with a complimentary in-home assessment.</p>
+        <div class="estimate-fields reveal" style="--d:.24s">
+          <div class="field">
+            <label for="e-town">Town</label>
+            <select id="e-town">
+              <option value="675" data-name="Marlboro">Marlboro</option>
+              <option value="900" data-name="Hoboken">Hoboken</option>
+              <option value="640" data-name="Red Bank">Red Bank</option>
+              <option value="720" data-name="Asbury Park">Asbury Park</option>
+              <option value="815" data-name="Avon-By-The-Sea">Avon-By-The-Sea</option>
+              <option value="360" data-name="Brick Township">Brick Township</option>
+              <option value="330" data-name="Carteret">Carteret</option>
+              <option value="720" data-name="Colts Neck" selected>Colts Neck</option>
+              <option value="430" data-name="East Brunswick">East Brunswick</option>
+              <option value="470" data-name="Englishtown">Englishtown</option>
+              <option value="415" data-name="Freehold">Freehold</option>
+              <option value="410" data-name="Hazlet">Hazlet</option>
+              <option value="565" data-name="Holmdel">Holmdel</option>
+              <option value="360" data-name="Howell Township">Howell Township</option>
+              <option value="345" data-name="Jackson Township">Jackson Township</option>
+              <option value="500" data-name="Manalapan">Manalapan</option>
+              <option value="620" data-name="Manasquan">Manasquan</option>
+              <option value="395" data-name="Matawan">Matawan</option>
+              <option value="330" data-name="New Brunswick">New Brunswick</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="e-sqft">Living Area (sq ft)</label>
+            <input id="e-sqft" type="number" inputmode="numeric" value="2400" min="300" step="50">
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="e-beds">Bedrooms</label>
+              <select id="e-beds">
+                <option>1</option><option>2</option><option>3</option>
+                <option selected>4</option><option>5</option><option>6</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="e-baths">Bathrooms</label>
+              <select id="e-baths">
+                <option>1</option><option>1.5</option><option>2</option>
+                <option selected>2.5</option><option>3</option><option>3.5</option><option>4</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="e-condition">Condition</label>
+            <select id="e-condition">
+              <option value="0.86">Needs Work</option>
+              <option value="1.00" selected>Average</option>
+              <option value="1.12">Updated</option>
+              <option value="1.28">Luxury / Renovated</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="estimate-result reveal" style="--d:.3s">
+        <span class="estimate-label">Estimated Market Value</span>
+        <span class="estimate-value" id="estimate-value">$0</span>
+        <span class="estimate-range" id="estimate-range">&mdash;</span>
+        <div class="estimate-meta">
+          <div><dt>Price / Sq Ft</dt><dd id="estimate-ppsf">$0</dd></div>
+          <div><dt>Confidence</dt><dd>Estimate</dd></div>
+        </div>
+        <form id="estimate-form" novalidate>
+          <p class="estimate-cta-label">Want the exact number? Get a free expert valuation.</p>
+          <div class="field">
+            <label for="ev-name">Name</label>
+            <input id="ev-name" name="name" type="text" autocomplete="name" required>
+          </div>
+          <div class="field">
+            <label for="ev-email">Email</label>
+            <input id="ev-email" name="email" type="email" autocomplete="email" required>
+          </div>
+          <button class="btn-gold" type="submit">Request Full Valuation</button>
+          <p class="form-note" id="estimate-note" role="status"></p>
+        </form>
       </div>
     </div>
   </section>
