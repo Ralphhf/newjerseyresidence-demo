@@ -10,19 +10,18 @@
     '(max-width: 768px), ((pointer: coarse) and (max-width: 1024px))'
   ).matches;
   const PORTRAIT = window.matchMedia('(orientation: portrait)').matches;
-  /* Frame sets (frame count kept modest so the browser's image cache never
-     blows up — 700+ decoded 1080p frames can crash a tab on real hardware):
-     desktop          frames/    301x 1920x1080 @10fps  (from the 16:9 4K master)
-     mobile portrait  frames-p/  211x 1080x1920 @14fps  (NATIVE 9:16 tour — phone-composed)
-     mobile landscape frames-sm/ 301x 1280x720  @10fps  (from the 16:9 master)
-     The portrait set is a purpose-built vertical video, so phones get a
-     full-screen hero with nothing cropped. */
+  /* Frame sets — high frame rate for smooth motion. The sliding-window loader
+     (below) holds only ~70–130 frames in memory at once, so the total count is
+     "free" and can't crash the tab regardless of how many frames there are:
+     desktop          frames/    722x 1600x900  @24fps  (from the 16:9 4K master)
+     mobile portrait  frames-p/  361x 1080x1920 @24fps  (NATIVE 9:16 tour)
+     mobile landscape frames-sm/ 301x 1280x720  @10fps  (from the 16:9 master) */
   const USE_P       = IS_MOBILE && PORTRAIT;
   const FRAME_DIR   = USE_P ? 'frames-p' : (IS_MOBILE ? 'frames-sm' : 'frames');
-  const N           = USE_P ? 211 : 301;
+  const N           = USE_P ? 361 : (IS_MOBILE ? 301 : 722);
   const EXT         = 'webp';
   const DPR_CAP     = 2;                          // sharp on scaled/retina displays
-  const CONCURRENCY = 12;                         // parallel image loads
+  const CONCURRENCY = 16;                         // parallel image loads
   const REDUCED     = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* Decode-ahead window (pre-decoded ImageBitmaps around the playhead) */
@@ -40,18 +39,18 @@
 
   /* Cache-buster: frame files keep the same names when re-encoded, so bump
      this whenever the frames change to force fresh fetches past the CDN. */
-  const ASSET_V = 'v4';
+  const ASSET_V = 'v5';
   const framePath = i => FRAME_DIR + '/frame_' + String(i + 1).padStart(4, '0') + '.' + EXT + '?' + ASSET_V;
 
   /* Sliding-window loading: only frames near the playhead are held in memory;
      the rest are released so the browser's image cache can never balloon and
      crash the tab (700+ decoded 1080p frames would). Memory stays ~constant
      regardless of film length. */
-  const LOAD_BEHIND = IS_MOBILE ? 10 : 16;   // preload this far back
-  const LOAD_AHEAD  = IS_MOBILE ? 26 : 44;   // …and this far ahead
-  const KEEP_BEHIND = LOAD_BEHIND + 12;      // evict past this
-  const KEEP_AHEAD  = LOAD_AHEAD  + 16;
-  const GATE_N      = Math.min(N, LOAD_AHEAD);  // frames needed to reveal
+  const LOAD_BEHIND = IS_MOBILE ? 10 : 26;   // preload this far back
+  const LOAD_AHEAD  = IS_MOBILE ? 36 : 72;   // …and well ahead, so scrubbing never outruns it
+  const KEEP_BEHIND = LOAD_BEHIND + (IS_MOBILE ? 10 : 14);   // evict past this
+  const KEEP_AHEAD  = LOAD_AHEAD  + (IS_MOBILE ? 12 : 20);
+  const GATE_N      = Math.min(N, IS_MOBILE ? 26 : 40);      // frames needed to reveal
 
   /* ---------------- Elements ---------------- */
 
