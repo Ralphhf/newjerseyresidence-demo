@@ -11,12 +11,12 @@
   ).matches;
   const PORTRAIT = window.matchMedia('(orientation: portrait)').matches;
   /* Frame sets from the 4K master:
-     desktop  frames/    722x 1920x1080 @24fps
-     mobile   frames-sm/ 301x 1280x720  @10fps  (FULL 16:9 scene — nothing cropped)
-     Portrait phones render this full frame fit-to-width so the WHOLE scene
-     shows edge to edge, letterboxed — never a center crop that hides the sides. */
-  const USE_P       = IS_MOBILE && PORTRAIT;      // portrait → fit-width (letterbox)
-  const FRAME_DIR   = IS_MOBILE ? 'frames-sm' : 'frames';
+     desktop          frames/    722x 1920x1080 @24fps
+     mobile portrait  frames-p/  301x 1080x1920 @10fps  (native-sharp portrait)
+     mobile landscape frames-sm/ 301x 1280x720  @10fps
+     Portrait phones cover-fill for a full-screen, edge-to-edge, no-letterbox hero. */
+  const USE_P       = IS_MOBILE && PORTRAIT;
+  const FRAME_DIR   = USE_P ? 'frames-p' : (IS_MOBILE ? 'frames-sm' : 'frames');
   const N           = IS_MOBILE ? 301 : 722;      // full 24fps desktop, 10fps mobile
   const EXT         = 'webp';
   const DPR_CAP     = 2;                          // sharp on scaled/retina displays
@@ -227,10 +227,10 @@
     needsDraw = true;
   }
 
-  /* Desktop/landscape: object-fit: cover (fills viewport, may crop).
-     Mobile portrait: fit-width so the FULL frame width is always visible,
-     letterboxed top/bottom in the site's black. */
-  const FIT_WIDTH = USE_P;
+  /* object-fit: cover everywhere — the hero fills the screen edge to edge.
+     On a portrait phone this trims a little off the sides of a wide shot;
+     that's the tradeoff for a full-screen, no-letterbox hero. */
+  const FIT_WIDTH = false;
 
   function coverDraw(src) {
     const iw = src.naturalWidth  || src.width;
